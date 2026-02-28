@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Memories</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+  
+  <style>
+    /* --- BASE STYLES --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      background: #0f0c1b; 
+      color: #ffffff;
+      padding: 40px 5%;
+      transition: background 1s ease-in-out; 
+      overflow-x: hidden;
+    }
+    h1, h2 { font-family: 'Playfair Display', serif; font-weight: 600; letter-spacing: 1px; }
+
+    /* --- AMBIENT PARTICLES --- */
+    #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .particle { position: absolute; background: rgba(255, 255, 255, 0.4); border-radius: 50%; animation: floatUp linear infinite; }
+    @keyframes floatUp {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 0.8; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+    #hub-view, #gallery-view { position: relative; z-index: 10; }
+
+    /* --- HUB VIEW STYLES --- */
+    .hub-header { margin-bottom: 50px; text-align: center; animation: fadeInDown 1s ease-out; }
+    .hub-header h1 { font-size: 3.5rem; margin-bottom: 10px; text-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; max-width: 1000px; margin: 0 auto; }
+    .album-card {
+      padding: 30px; border-radius: 20px; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+      position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); opacity: 0;
+    }
+    .album-card:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.5); }
+    .album-card h2 { font-size: 1.8rem; margin-bottom: 8px; }
+
+    /* --- GALLERY VIEW STYLES --- */
+    #gallery-view { max-width: 1200px; margin: 0 auto; }
+    .gallery-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 20px; margin-bottom: 40px; animation: fadeInDown 0.8s ease-out; }
+    .gallery-title { font-size: 3rem; margin-bottom: 5px; }
+    #active-album-desc { font-size: 1.1rem; font-style: italic; font-family: 'Playfair Display', serif; }
+    .back-btn {
+      background: rgba(255, 255, 255, 0.1); color: inherit; border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 10px 24px; border-radius: 30px; cursor: pointer; font-size: 1rem; font-family: 'Poppins', sans-serif;
+      backdrop-filter: blur(5px); transition: all 0.3s ease;
+    }
+    .back-btn:hover { background: rgba(255, 255, 255, 0.2); transform: translateX(-5px); }
+    
+    /* --- PERFECT MASONRY PHOTO GRID --- */
+    .photo-grid { 
+      column-count: 4; 
+      column-gap: 20px; 
+    }
+    
+    /* Responsive columns for smaller screens */
+    @media (max-width: 1000px) { .photo-grid { column-count: 3; } }
+    @media (max-width: 750px) { .photo-grid { column-count: 2; } }
+    @media (max-width: 450px) { .photo-grid { column-count: 1; } }
+
+    .gallery-photo {
+      width: 100%; 
+      height: auto; /* Forces the photo to show its true height without cropping */
+      margin-bottom: 20px; 
+      display: block; 
+      break-inside: avoid; /* Stops photos from breaking in half across columns */
+      border-radius: 16px; 
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      cursor: zoom-in; 
+      opacity: 0; 
+      transform: translateY(30px); 
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .gallery-photo.show { animation: slideUpFade 0.8s ease forwards; }
+    .gallery-photo:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4); z-index: 2; position: relative; }
+
+    /* --- LIGHTBOX --- */
+    #lightbox {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(15px); z-index: 1000; display: flex; justify-content: center; align-items: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    #lightbox.active { opacity: 1; pointer-events: all; }
+    #lightbox img { max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 0 50px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    #lightbox.active img { transform: scale(1); }
+
+    /* --- MUSIC PLAYER MENU --- */
+    .music-player-container {
+      position: fixed; bottom: 30px; right: 30px;
+      display: flex; align-items: center; gap: 15px;
+      background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 10px 20px; border-radius: 40px;
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      z-index: 100; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .music-player-container:hover { background: rgba(255, 255, 255, 0.15); }
+
+    .play-btn {
+      background: none; border: none; color: #fff; font-size: 1.1rem;
+      cursor: pointer; font-family: 'Poppins', sans-serif;
+      display: flex; align-items: center; gap: 8px; width: 90px; outline: none;
+    }
+
+    .song-dropdown {
+      background: transparent; border: none; color: #fff; font-family: 'Poppins', sans-serif;
+      font-size: 0.95rem; cursor: pointer; outline: none; appearance: none;
+      padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .song-dropdown option { background: #1a1528; color: #fff; font-family: 'Poppins', sans-serif; }
+
+    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUpFade { to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <div id="particles"></div>
+
+  <audio id="bg-music" loop>
+    <source src="Sevyn Streeter - It Won't Stop ft Chris Brown.mp3" type="audio/mpeg">
+  </audio>
+
+  <div class="music-player-container">
+    <button id="music-btn" class="play-btn" onclick="toggleMusic()">🤍 Play</button>
+    <select id="song-selector" class="song-dropdown" onchange="changeSong()">
+      <option value="Sevyn Streeter - It Won't Stop ft Chris Brown.mp3">It Won't Stop</option>
+      <option value="oursong2.mp3">Very Special Love</option>
+      <option value="oursong3.mp3">Our Song 3</option>
+    </select>
+  </div>
+
+  <div id="hub-view">
+    <div class="hub-header">
+      <h1>Our Memories</h1>
+      <p>Select a chapter of our story...</p>
+    </div>
+    <div class="album-grid" id="album-grid"></div>
+  </div>
+
+  <div id="gallery-view" style="display: none;">
+    <div class="gallery-header">
+      <div>
+        <h1 class="gallery-title" id="active-album-title">Album Name</h1>
+        <p id="active-album-desc">Album description goes here...</p>
+      </div>
+      <button class="back-btn" onclick="closeAlbum()">← Back Home</button>
+    </div>
+    <div class="photo-grid" id="photo-container"></div>
+  </div>
+
+  <div id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="Full screen memory">
+  </div>
+
+  <script>
+    // --- MUSIC LOGIC ---
+    function toggleMusic() {
+      const music = document.getElementById('bg-music');
+      const btn = document.getElementById('music-btn');
+      
+      if (music.paused) {
+        music.play();
+        btn.innerHTML = '⏸ Pause';
+      } else {
+        music.pause();
+        btn.innerHTML = '🤍 Play';
+      }
+    }
+
+    function changeSong() {
+      const music = document.getElementById('bg-music');
+      const selector = document.getElementById('song-selector');
+      const btn = document.getElementById('music-btn');
+      
+      const wasPlaying = !music.paused; 
+      music.src = selector.value;
+      
+      if (wasPlaying) {
+        music.play();
+        btn.innerHTML = '⏸ Pause';
+      }
+    }
+
+    // --- ALBUM DATA ---
+    const albumData = {
+      'ocean': {
+        title: "Ocean Park 🌊",
+        desc: "That amazing day we spent looking at the fishes.",
+        theme: { bg1: '#001a2e', bg2: '#0b5239', textMain: '#ffffff', textMuted: 'rgba(255,255,255,0.7)', cardBg: 'rgba(0, 34, 62, 0.4)' },
+        images: ['ocean1.jpg', 'ocean2.jpg', 'ocean3.jpg', 'ocean4.jpg', 'ocean5.jpg', 'ocean6.jpg']
+      },
+      'coffee': {
+        title: "Bintana Cafe ☕",
+        desc: "Warm lattes and talking for hours.",
+        theme: { bg1: '#361e0a', bg2: '#5c4547', textMain: '#ffffff', textMuted: 'rgba(255,255,255,0.8)', cardBg: 'rgba(96, 56, 19, 0.4)' },
+        images: ['bintana1.jpg', 'bintana2.jpg', 'bintana3.jpg', 'bintana4.jpg', 'bintana5.jpg'] 
+      },
+      'special': {
+        title: "Anjo World ✨",
+        desc: "Every second with you is my favorite.",
+        theme: { bg1: '#2e0f1b', bg2: '#522032', textMain: '#ffffff', textMuted: 'rgba(255,255,255,0.8)', cardBg: 'rgba(74, 25, 44, 0.4)' },
+        images: ['anjo1.jpg', 'anjo2.jpg', 'anjo3.jpg', 'anjo4.jpg', 'anjo5.jpg', 'anjo6.jpg', 'anjo7.jpg', 'anjo8.jpg'] 
+      }
+    };
+
+    function createParticles() {
+      const particleContainer = document.getElementById('particles');
+      if (!particleContainer) return;
+      for (let i = 0; i < 30; i++) {
+        let particle = document.createElement('div');
+        particle.className = 'particle';
+        let size = Math.random() * 4 + 1; 
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.left = `${Math.random() * 100}vw`;
+        particle.style.animationDuration = `${Math.random() * 10 + 10}s`; 
+        particle.style.animationDelay = `${Math.random() * 10}s`;
+        particleContainer.appendChild(particle);
+      }
+    }
+
+    function initializeHub() {
+      const grid = document.getElementById('album-grid');
+      if (!grid) return;
+      let delay = 0;
+      for (const [key, album] of Object.entries(albumData)) {
+        const card = document.createElement('div');
+        card.className = 'album-card';
+        card.style.background = album.theme.cardBg;
+        card.style.animation = `fadeInDown 0.8s ease-out forwards`;
+        card.style.animationDelay = `${delay}s`;
+        card.onclick = () => openAlbum(key);
+        card.innerHTML = `<h2>${album.title}</h2><p style="color: ${album.theme.textMuted}; font-style: italic;">${album.images.length} beautiful memories</p>`;
+        grid.appendChild(card);
+        delay += 0.2; 
+      }
+    }
+
+    window.openAlbum = function(albumKey) {
+      const album = albumData[albumKey];
+      if (!album) return;
+      document.getElementById('active-album-title').innerText = album.title;
+      document.getElementById('active-album-desc').innerText = album.desc;
+      document.getElementById('active-album-desc').style.color = album.theme.textMuted; 
+      document.body.style.background = `radial-gradient(circle at top left, ${album.theme.bg1}, ${album.theme.bg2})`;
+
+      const photoContainer = document.getElementById('photo-container');
+      photoContainer.innerHTML = ''; 
+
+      if (album.images && album.images.length > 0) {
+        album.images.forEach((imageName, index) => {
+          const img = document.createElement('img');
+          img.src = imageName;
+          img.className = 'gallery-photo'; 
+          img.style.animationDelay = `${index * 0.1}`;
+          img.onclick = () => openLightbox(imageName);
+          img.onerror = function() {
+            console.error("Couldn't load image:", imageName);
+            this.style.display = 'none'; 
+          };
+          photoContainer.appendChild(img);
+          setTimeout(() => img.classList.add('show'), 50);
+        });
+      } else {
+          photoContainer.innerHTML = '<p style="font-style: italic;">Saving memories for later...</p>';
+      }
+
+      document.getElementById('hub-view').style.display = 'none';
+      document.getElementById('gallery-view').style.display = 'block';
+    }
+
+    window.closeAlbum = function() {
+      document.getElementById('gallery-view').style.display = 'none';
+      document.getElementById('hub-view').style.display = 'block';
+      document.body.style.background = '#0f0c1b'; 
+    }
+
+    window.openLightbox = function(imgSrc) {
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      if (lightbox && lightboxImg) {
+        lightboxImg.src = imgSrc;
+        lightbox.classList.add('active');
+      }
+    }
+
+    window.closeLightbox = function() {
+      const lightbox = document.getElementById('lightbox');
+      if (lightbox) {
+        lightbox.classList.remove('active');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      createParticles();
+      initializeHub();
+    });
+  </script>
+</body>
+</html>
